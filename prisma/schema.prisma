@@ -1,0 +1,107 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  phone         String?
+  password      String
+  role          Role      @default(USER)
+  walletAddress String?   @unique
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tokens        Token[]
+  redemptions   Redemption[]
+  scans         BottleScan[]
+}
+
+enum Role {
+  USER
+  SHOP_OWNER
+  ADMIN
+}
+
+model Token {
+  id            String      @id @default(cuid())
+  code          String      @unique  // e.g., ECO-123456
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  totalBottles  Int
+  totalAmount   Float       // BDT
+  status        TokenStatus @default(PENDING)
+  blockchainHash String?    // blockchain transaction hash
+  blockchainTx   String?    // full tx record
+  createdAt     DateTime    @default(now())
+  expiresAt     DateTime
+  redeemedAt    DateTime?
+
+  bottles       BottleScan[]
+  redemption    Redemption?
+}
+
+enum TokenStatus {
+  PENDING
+  REDEEMED
+  EXPIRED
+}
+
+model BottleScan {
+  id          String   @id @default(cuid())
+  barcode     String   @unique  // each barcode only once
+  bottleType  String
+  refundValue Float
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  tokenId     String?
+  token       Token?   @relation(fields: [tokenId], references: [id])
+  scannedAt   DateTime @default(now())
+  blockchainHash String?
+}
+
+model Redemption {
+  id          String   @id @default(cuid())
+  tokenId     String   @unique
+  token       Token    @relation(fields: [tokenId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  amount      Float
+  method      String   @default("cash")  // cash, bkash, nagad
+  redeemedAt  DateTime @default(now())
+  blockchainHash String?
+}
+
+model Location {
+  id        String  @id @default(cuid())
+  name      String
+  area      String
+  city      String
+  district  String
+  status    LocationStatus @default(ACTIVE)
+  lat       Float?
+  lng       Float?
+}
+
+enum LocationStatus {
+  ACTIVE
+  PLANNED
+  INACTIVE
+}
+
+model BlockchainRecord {
+  id          String   @id @default(cuid())
+  entityType  String   // token | scan | redemption
+  entityId    String
+  txHash      String   @unique
+  blockNumber Int?
+  data        Json
+  createdAt   DateTime @default(now())
+}

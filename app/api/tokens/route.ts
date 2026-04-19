@@ -1,0 +1,123 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/db'
+import { buildRecord, broadcastToChain, BlockchainPayload } from '@/lib/blockchain'
+import { z } from 'zod'
+
+const schema = z.object({
+  bottles: z.array(z.object({
+    barcode:    z.string(),
+    bottleType: z.string(),
+    refundValue: z.number(),
+  })).min(1),
+})
+
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const userId = (session.user as any).id
+  const body = await req.json()
+  const parsed = schema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
+  }
+
+  const { bottles } = parsed.data
+  const totalAmount = bottles.reduce((s, b) => s + b.refundValue, 0)
+  const tokenCode = 'ECO-' + Math.floor(100000 + Math.random() * 900000)
+
+  try {
+    // Check for duplicate barcodes
+    const existing = await prisma.bottleScan.findMany({
+      where: { barcode: { in: bottles.map(b => b.barcode) } },
+      select: { barcode: true },
+    })
+    if (existing.length > 0) {
+      return NextResponse.json({
+        error: `Duplicate barcodes: ${existing.map(e => e.barcode).join(', ')}`
+      }, { status: 409 })
+    }
+
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+
+    const token = await prisma.token.create({
+      data: {
+        code:         tokenCode,
+        userId,
+        totalBottles: bottles.length,
+        totalAmount,
+        expiresAt,
+        bottles: {
+          create: bottles.map(b => ({
+            barcode:    b.barcode,
+            bottleType: b.bottleType,
+            refundValue: b.refundValue,
+            userId,
+          })),
+        },
+      },
+      include: { bottles: true },
+    })
+
+    // Build blockchain record
+    const payload: BlockchainPayload = {
+      type:      'TOKEN',
+      id:        token.id,
+      userId,
+      data:      { code: tokenCode, bottles: bottles.length, totalAmount, expiresAt: expiresAt.toISOString() },
+      timestamp: new Date().toISOString(),
+    }
+    const { hash } = buildRecord(payload)
+
+    // Optional: broadcast to real chain
+    const txHash = await broadcastToChain(payload)
+
+    // Store hash
+    await prisma.token.update({
+      where: { id: token.id },
+      data:  { blockchainHash: txHash || hash },
+    })
+
+    await prisma.blockchainRecord.create({
+      data: {
+        entityType: 'token',
+        entityId:   token.id,
+        txHash:     txHash || hash,
+        data:       payload as any,
+      },
+    })
+
+    return NextResponse.json({
+      token:           tokenCode,
+      totalAmount,
+      blockchainHash:  txHash || hash,
+      expiresAt:       expiresAt.toISOString(),
+    }, { status: 201 })
+
+  } catch (err) {
+    console.error(err)
+    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+  }
+}
+
+// GET: fetch user's tokens
+export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const userId = (session.user as any).id
+  const tokens = await prisma.token.findMany({
+    where:   { userId },
+    include: { bottles: true, redemption: true },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+  })
+
+  return NextResponse.json({ tokens })
+}
