@@ -368,7 +368,7 @@ export default function ScanClient() {
                 সব মুছুন
               </button>
             </div>
-            <div className="divide-y max-h-60 overflow-y-auto" style={{ divideColor: 'rgba(0,0,0,0.04)' }}>
+            <div className="divide-y max-h-60 overflow-y-auto" style={{ borderColor: 'rgba(0,0,0,0.04)' }}>
               {rows.map((r, i) => (
                 <div key={i} className="flex items-center justify-between px-4 py-2.5 text-sm">
                   <div>
