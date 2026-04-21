@@ -142,6 +142,8 @@ export const translations = {
     getToken: 'Get token',
     nightMode: 'Night mode',
     dayMode: 'Day mode',
+    dashTitle: 'Your Dashboard',
+    noTokens: 'No tokens yet',
     language: 'বাংলা',
   },
 
@@ -288,6 +290,8 @@ export const translations = {
     getToken: 'টোকেন নিন',
     nightMode: 'রাতের মোড',
     dayMode: 'দিনের মোড',
+    dashTitle: 'আপনার Dashboard',
+     noTokens: 'কোনো Token নেই',
     language: 'English',
   },
 }
