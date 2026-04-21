@@ -8,7 +8,7 @@ import { prisma } from '@/lib/db'
 import { buildRecord, broadcastToChain, BlockchainPayload } from '@/lib/blockchain'
 import { generateTokenCode, hashTokenCode, getCodePrefix } from '@/lib/tokenSecurity'
 import { z } from 'zod'
-
+ 
 const schema = z.object({
   bottles: z.array(z.object({
     barcode:     z.string(),
@@ -16,30 +16,30 @@ const schema = z.object({
     refundValue: z.number(),
   })).min(1),
 })
-
+ 
 // ── POST: Generate a new token ────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-
+ 
   const userId = (session.user as any).id
   const body   = await req.json()
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
   }
-
+ 
   const { bottles }   = parsed.data
   const totalAmount   = bottles.reduce((s, b) => s + b.refundValue, 0)
-
+ 
   // ── COMMIT-REVEAL: generate code, compute hash, NEVER store plaintext ──
-  const plaintextCode = generateTokenCode()          // e.g. "ECO-7K3M9PQR"
-  const codeHash      = hashTokenCode(plaintextCode) // HMAC-SHA256
-  const codePrefix    = getCodePrefix(plaintextCode) // "ECO-7K" (safe to store)
+  const plaintextCode = generateTokenCode()
+  const codeHash      = hashTokenCode(plaintextCode)
+  const codePrefix    = getCodePrefix(plaintextCode)
   // ─────────────────────────────────────────────────────────────────────
-
+ 
   try {
     // Check for duplicate barcodes
     const existing = await prisma.bottleScan.findMany({
@@ -51,9 +51,9 @@ export async function POST(req: NextRequest) {
         error: `Duplicate barcodes: ${existing.map(e => e.barcode).join(', ')}`
       }, { status: 409 })
     }
-
+ 
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
-
+ 
     const token = await prisma.token.create({
       data: {
         codeHash,
@@ -73,14 +73,13 @@ export async function POST(req: NextRequest) {
       },
       include: { bottles: true },
     })
-
-    // Build blockchain record — note: we hash the codeHash, NOT plaintext
+ 
     const payload: BlockchainPayload = {
       type:      'TOKEN',
       id:        token.id,
       userId,
-      data:      {
-        codeHash,    // commitment on-chain
+      data: {
+        codeHash,
         bottles:     bottles.length,
         totalAmount,
         expiresAt:   expiresAt.toISOString()
@@ -89,12 +88,12 @@ export async function POST(req: NextRequest) {
     }
     const { hash } = buildRecord(payload)
     const txHash   = await broadcastToChain(payload)
-
+ 
     await prisma.token.update({
       where: { id: token.id },
       data:  { blockchainHash: txHash || hash },
     })
-
+ 
     await prisma.blockchainRecord.create({
       data: {
         entityType: 'token',
@@ -103,52 +102,39 @@ export async function POST(req: NextRequest) {
         data:       payload as any,
       },
     })
-
-    // ✅ Return plaintext code ONCE — this is the ONLY time it exists in plaintext
+ 
     return NextResponse.json({
-      token:          plaintextCode,   // ← user sees this ONCE, save it!
-      codePrefix,                      // ← safe to show later in dashboard
+      token:          plaintextCode,
+      codePrefix,
       totalAmount,
       blockchainHash: txHash || hash,
       expiresAt:      expiresAt.toISOString(),
       warning:        'এই code টি save করুন। এটি আর দেখানো হবে না।',
     }, { status: 201 })
-
+ 
   } catch (err) {
     console.error(err)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
 }
-
+ 
 // ── GET: fetch user's tokens (NO plaintext code returned) ─────────────
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-
+ 
   const userId = (session.user as any).id
   const tokens = await prisma.token.findMany({
     where:   { userId },
     include: { bottles: true, redemption: true },
     orderBy: { createdAt: 'desc' },
     take:    20,
-    select: {
-      id:            true,
-      codePrefix:    true,    // ✅ safe to show
-      // codeHash intentionally excluded from client response
-      userId:        true,
-      totalBottles:  true,
-      totalAmount:   true,
-      status:        true,
-      blockchainHash: true,
-      createdAt:     true,
-      expiresAt:     true,
-      redeemedAt:    true,
-      bottles:       true,
-      redemption:    true,
-    },
   })
-
-  return NextResponse.json({ tokens })
+ 
+  // codeHash client-এ পাঠানো হবে না
+  const safeTokens = tokens.map(({ codeHash, ...token }) => token)
+ 
+  return NextResponse.json({ tokens: safeTokens })
 }
