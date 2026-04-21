@@ -1,18 +1,23 @@
+/**
+ * app/api/tokens/route.ts  — UPDATED with Commit-Reveal Security
+ */
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { buildRecord, broadcastToChain, BlockchainPayload } from '@/lib/blockchain'
+import { generateTokenCode, hashTokenCode, getCodePrefix } from '@/lib/tokenSecurity'
 import { z } from 'zod'
 
 const schema = z.object({
   bottles: z.array(z.object({
-    barcode:    z.string(),
-    bottleType: z.string(),
+    barcode:     z.string(),
+    bottleType:  z.string(),
     refundValue: z.number(),
   })).min(1),
 })
 
+// ── POST: Generate a new token ────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
@@ -20,20 +25,25 @@ export async function POST(req: NextRequest) {
   }
 
   const userId = (session.user as any).id
-  const body = await req.json()
+  const body   = await req.json()
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
   }
 
-  const { bottles } = parsed.data
-  const totalAmount = bottles.reduce((s, b) => s + b.refundValue, 0)
-  const tokenCode = 'ECO-' + Math.floor(100000 + Math.random() * 900000)
+  const { bottles }   = parsed.data
+  const totalAmount   = bottles.reduce((s, b) => s + b.refundValue, 0)
+
+  // ── COMMIT-REVEAL: generate code, compute hash, NEVER store plaintext ──
+  const plaintextCode = generateTokenCode()          // e.g. "ECO-7K3M9PQR"
+  const codeHash      = hashTokenCode(plaintextCode) // HMAC-SHA256
+  const codePrefix    = getCodePrefix(plaintextCode) // "ECO-7K" (safe to store)
+  // ─────────────────────────────────────────────────────────────────────
 
   try {
     // Check for duplicate barcodes
     const existing = await prisma.bottleScan.findMany({
-      where: { barcode: { in: bottles.map(b => b.barcode) } },
+      where:  { barcode: { in: bottles.map(b => b.barcode) } },
       select: { barcode: true },
     })
     if (existing.length > 0) {
@@ -46,15 +56,16 @@ export async function POST(req: NextRequest) {
 
     const token = await prisma.token.create({
       data: {
-        code:         tokenCode,
+        codeHash,
+        codePrefix,
         userId,
         totalBottles: bottles.length,
         totalAmount,
         expiresAt,
         bottles: {
           create: bottles.map(b => ({
-            barcode:    b.barcode,
-            bottleType: b.bottleType,
+            barcode:     b.barcode,
+            bottleType:  b.bottleType,
             refundValue: b.refundValue,
             userId,
           })),
@@ -63,20 +74,22 @@ export async function POST(req: NextRequest) {
       include: { bottles: true },
     })
 
-    // Build blockchain record
+    // Build blockchain record — note: we hash the codeHash, NOT plaintext
     const payload: BlockchainPayload = {
       type:      'TOKEN',
       id:        token.id,
       userId,
-      data:      { code: tokenCode, bottles: bottles.length, totalAmount, expiresAt: expiresAt.toISOString() },
+      data:      {
+        codeHash,    // commitment on-chain
+        bottles:     bottles.length,
+        totalAmount,
+        expiresAt:   expiresAt.toISOString()
+      },
       timestamp: new Date().toISOString(),
     }
     const { hash } = buildRecord(payload)
+    const txHash   = await broadcastToChain(payload)
 
-    // Optional: broadcast to real chain
-    const txHash = await broadcastToChain(payload)
-
-    // Store hash
     await prisma.token.update({
       where: { id: token.id },
       data:  { blockchainHash: txHash || hash },
@@ -91,11 +104,14 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    // ✅ Return plaintext code ONCE — this is the ONLY time it exists in plaintext
     return NextResponse.json({
-      token:           tokenCode,
+      token:          plaintextCode,   // ← user sees this ONCE, save it!
+      codePrefix,                      // ← safe to show later in dashboard
       totalAmount,
-      blockchainHash:  txHash || hash,
-      expiresAt:       expiresAt.toISOString(),
+      blockchainHash: txHash || hash,
+      expiresAt:      expiresAt.toISOString(),
+      warning:        'এই code টি save করুন। এটি আর দেখানো হবে না।',
     }, { status: 201 })
 
   } catch (err) {
@@ -104,7 +120,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET: fetch user's tokens
+// ── GET: fetch user's tokens (NO plaintext code returned) ─────────────
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
@@ -116,7 +132,22 @@ export async function GET(req: NextRequest) {
     where:   { userId },
     include: { bottles: true, redemption: true },
     orderBy: { createdAt: 'desc' },
-    take: 20,
+    take:    20,
+    select: {
+      id:            true,
+      codePrefix:    true,    // ✅ safe to show
+      // codeHash intentionally excluded from client response
+      userId:        true,
+      totalBottles:  true,
+      totalAmount:   true,
+      status:        true,
+      blockchainHash: true,
+      createdAt:     true,
+      expiresAt:     true,
+      redeemedAt:    true,
+      bottles:       true,
+      redemption:    true,
+    },
   })
 
   return NextResponse.json({ tokens })

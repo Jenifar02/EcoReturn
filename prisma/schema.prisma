@@ -5,7 +5,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -22,6 +21,7 @@ model User {
   tokens        Token[]
   redemptions   Redemption[]
   scans         BottleScan[]
+  shopProfile   ShopProfile?
 }
 
 enum Role {
@@ -31,21 +31,26 @@ enum Role {
 }
 
 model Token {
-  id            String      @id @default(cuid())
-  code          String      @unique  // e.g., ECO-123456
-  userId        String
-  user          User        @relation(fields: [userId], references: [id])
-  totalBottles  Int
-  totalAmount   Float       // BDT
-  status        TokenStatus @default(PENDING)
-  blockchainHash String?    // blockchain transaction hash
-  blockchainTx   String?    // full tx record
-  createdAt     DateTime    @default(now())
-  expiresAt     DateTime
-  redeemedAt    DateTime?
+  id              String      @id @default(cuid())
+  // ── Commit-Reveal fields ──────────────────────────────────────────
+  // codeHash = SHA-256(plaintext_code + TOKEN_SECRET)
+  // Plaintext code is NEVER stored. User sees it once on generation.
+  codeHash        String      @unique   // stored commitment
+  codePrefix      String                // e.g. "ECO-1" — lets user search by prefix, not full code
+  // ─────────────────────────────────────────────────────────────────
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  totalBottles    Int
+  totalAmount     Float                 // BDT
+  status          TokenStatus @default(PENDING)
+  blockchainHash  String?
+  blockchainTx    String?
+  createdAt       DateTime    @default(now())
+  expiresAt       DateTime
+  redeemedAt      DateTime?
 
-  bottles       BottleScan[]
-  redemption    Redemption?
+  bottles         BottleScan[]
+  redemption      Redemption?
 }
 
 enum TokenStatus {
@@ -55,32 +60,68 @@ enum TokenStatus {
 }
 
 model BottleScan {
-  id          String   @id @default(cuid())
-  barcode     String   @unique  // each barcode only once
-  bottleType  String
-  refundValue Float
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  tokenId     String?
-  token       Token?   @relation(fields: [tokenId], references: [id])
-  scannedAt   DateTime @default(now())
+  id             String   @id @default(cuid())
+  barcode        String   @unique      // each barcode only once
+  bottleType     String
+  refundValue    Float
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  tokenId        String?
+  token          Token?   @relation(fields: [tokenId], references: [id])
+  scannedAt      DateTime @default(now())
   blockchainHash String?
 }
 
 model Redemption {
-  id          String   @id @default(cuid())
-  tokenId     String   @unique
-  token       Token    @relation(fields: [tokenId], references: [id])
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  amount      Float
-  method      String   @default("cash")  // cash, bkash, nagad
-  redeemedAt  DateTime @default(now())
+  id             String   @id @default(cuid())
+  tokenId        String   @unique
+  token          Token    @relation(fields: [tokenId], references: [id])
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  shopId         String?
+  shopProfile    ShopProfile? @relation(fields: [shopId], references: [id])
+  amount         Float
+  method         String   @default("cash")   // cash, bkash, nagad
+  redeemedAt     DateTime @default(now())
   blockchainHash String?
 }
 
+// ── Shop Owner profile ────────────────────────────────────────────────
+model ShopProfile {
+  id          String        @id @default(cuid())
+  userId      String        @unique
+  user        User          @relation(fields: [userId], references: [id])
+  shopName    String
+  area        String
+  district    String
+  phone       String
+  status      ShopStatus    @default(PENDING)
+  approvedAt  DateTime?
+  createdAt   DateTime      @default(now())
+
+  redemptions Redemption[]
+}
+
+enum ShopStatus {
+  PENDING
+  APPROVED
+  SUSPENDED
+}
+
+// ── Pre-registered Barcodes (Admin generates) ─────────────────────────
+model RegisteredBarcode {
+  id          String   @id @default(cuid())
+  barcode     String   @unique     // EAN-13 or QR value
+  bottleType  String               // "PET 500ml" | "PET 1L" | "Glass" | "Aluminium"
+  refundValue Float                // BDT
+  brand       String?
+  isUsed      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  usedAt      DateTime?
+}
+
 model Location {
-  id        String  @id @default(cuid())
+  id        String         @id @default(cuid())
   name      String
   area      String
   city      String
