@@ -195,19 +195,19 @@ export default function ScanClient() {
           {/* Warning header */}
           <div className="p-5 text-center" style={{ background: '#b71c1c' }}>
             <AlertTriangle className="w-10 h-10 text-white mx-auto mb-2" />
-            <h2 className="text-xl font-bold text-white">⚠️ এই code টি SAVE করুন!</h2>
-            <p className="text-red-100 text-sm mt-1">এটি আর কখনো দেখানো হবে না</p>
+            <h2 className="text-xl font-bold text-white">⚠️ {t('saveCodeWarning')}</h2>
+            <p className="text-red-100 text-sm mt-1"> {t('saveCodeSubtitle')}</p>
           </div>
 
           <div className="p-6 space-y-5">
             {/* The token code — big and clear */}
             <div className="rounded-xl border-2 p-4 text-center" style={{ borderColor: 'var(--eco-primary)', background: 'rgba(46,125,50,0.05)' }}>
-              <p className="text-xs font-semibold mb-2 opacity-60">আপনার Token Code</p>
+              <p className="text-xs font-semibold mb-2 opacity-60">{t('yourTokenCode')}</p>
               <p className="text-3xl font-mono font-bold tracking-widest" style={{ color: 'var(--eco-primary)' }}>
                 {tokenResult.code}
               </p>
               <p className="text-sm opacity-50 mt-1">
-                মেয়াদ: {new Date(tokenResult.expiresAt).toLocaleDateString('bn-BD')}
+                 {t('expires')}: {new Date(tokenResult.expiresAt).toLocaleDateString()}
               </p>
             </div>
 
@@ -226,13 +226,13 @@ export default function ScanClient() {
               style={{ background: codeCopied ? '#388e3c' : 'var(--eco-primary)', color: 'white' }}
             >
               {codeCopied ? <CheckCircle className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-              {codeCopied ? 'Copied!' : 'Code Copy করুন'}
+              {codeCopied ? 'Copied!' : t('copyCode')}
             </button>
 
             {/* Screenshot reminder */}
             <div className="rounded-lg p-3 text-sm" style={{ background: 'rgba(255,152,0,0.1)', color: '#e65100' }}>
-              <p className="font-semibold">📸 Screenshot নিন অথবা লিখে রাখুন</p>
-              <p className="mt-1 opacity-80">Shop-এ গিয়ে এই code দিলে টাকা পাবেন। Code হারিয়ে গেলে টাকা পাওয়া যাবে না।</p>
+              <p className="font-semibold">📸  {t('screenshotReminder')}</p>
+              <p className="mt-1 opacity-80">{t('screenshotText')}</p>
             </div>
 
             {/* Blockchain info */}
@@ -244,7 +244,7 @@ export default function ScanClient() {
               className="w-full py-4 rounded-xl font-bold text-white transition-all"
               style={{ background: 'var(--eco-primary)' }}
             >
-              ✅ Code Save করেছি — Continue
+              ✅{t('savedConfirm')}
             </button>
           </div>
         </div>
@@ -258,7 +258,7 @@ export default function ScanClient() {
       <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--eco-bg)' }}>
         <div className="w-full max-w-sm rounded-2xl p-8 text-center shadow-xl" style={{ background: 'var(--eco-card)' }}>
           <CheckCircle className="w-16 h-16 mx-auto mb-4" style={{ color: 'var(--eco-primary)' }} />
-          <h2 className="text-2xl font-bold mb-2">Token তৈরি হয়েছে!</h2>
+          <h2 className="text-2xl font-bold mb-2">{t('success')}</h2>
           <p className="opacity-60 mb-1">Prefix: <span className="font-mono font-bold">{tokenResult.codePrefix}***</span></p>
           <p className="opacity-60 mb-6 text-sm">Dashboard-এ এই token এর status দেখতে পাবেন</p>
 
@@ -268,14 +268,14 @@ export default function ScanClient() {
               className="w-full py-3 rounded-xl font-semibold text-white"
               style={{ background: 'var(--eco-primary)' }}
             >
-              আরো Bottle Scan করুন
+              {t('scanMore')}
             </button>
             <Link
               href="/dashboard"
               className="block w-full py-3 rounded-xl font-semibold text-center border"
               style={{ borderColor: 'var(--eco-primary)', color: 'var(--eco-primary)' }}
             >
-              Dashboard দেখুন
+              {t('dashboard')}
             </Link>
           </div>
         </div>
@@ -315,7 +315,7 @@ export default function ScanClient() {
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-white"
                 style={{ background: 'var(--eco-primary)' }}
               >
-                <Camera className="w-4 h-4" /> Camera চালু করুন
+                <Camera className="w-4 h-4" /> {t('startScan')}
               </button>
             ) : (
               <button
@@ -323,15 +323,14 @@ export default function ScanClient() {
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold"
                 style={{ background: 'rgba(211,47,47,0.1)', color: '#d32f2f' }}
               >
-                <CameraOff className="w-4 h-4" /> বন্ধ করুন
-              </button>
+                <CameraOff className="w-4 h-4" /> {t('stop')}              </button>
             )}
           </div>
         </div>
 
-        {/* Manual entry */}
+      
         <div className="rounded-2xl p-4 shadow" style={{ background: 'var(--eco-card)' }}>
-          <p className="text-sm font-semibold mb-3 opacity-70">Manual Entry</p>
+          <p className="text-sm font-semibold mb-3 opacity-70"> {t('manualEntry')}</p>
           <div className="flex gap-2 mb-2">
             <input
               value={manualCode}
@@ -365,7 +364,7 @@ export default function ScanClient() {
             <div className="p-3 flex items-center justify-between border-b" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
               <span className="font-semibold text-sm">{rows.length}টি Bottle — মোট ৳{total}</span>
               <button onClick={() => setRows([])} className="text-xs opacity-50 hover:opacity-100">
-                সব মুছুন
+                {t('clear')}
               </button>
             </div>
             <div className="divide-y max-h-60 overflow-y-auto" style={{ borderColor: 'rgba(0,0,0,0.04)' }}>
@@ -401,7 +400,7 @@ export default function ScanClient() {
                 {generating ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
-                  <><Zap className="w-5 h-5" /> Token Generate করুন</>
+                  <><Zap className="w-5 h-5" /> {t('generateToken')}</>
                 )}
               </button>
             </div>
@@ -412,7 +411,7 @@ export default function ScanClient() {
         <div className="flex items-start gap-3 p-4 rounded-xl text-sm" style={{ background: 'rgba(46,125,50,0.06)' }}>
           <Shield className="w-5 h-5 mt-0.5 shrink-0" style={{ color: 'var(--eco-primary)' }} />
           <p className="opacity-70">
-            আপনার token code encrypted আকারে store হয়। Admin বা কেউ এটি দেখতে পারবে না। শুধু আপনি এবং shop owner verify করতে পারবেন।
+           {t('screenshotText')}
           </p>
         </div>
 
