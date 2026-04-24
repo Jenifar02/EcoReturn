@@ -1,3 +1,4 @@
+
 'use client'
 
 /**
@@ -13,7 +14,7 @@ import { useSession } from 'next-auth/react'
 import { useLang } from '@/lib/providers'
 import {
   Camera, CameraOff, Trash2, Plus, Zap, Shield,
-  AlertCircle, CheckCircle, Copy, Eye, EyeOff, AlertTriangle
+  AlertCircle, CheckCircle, Copy, AlertTriangle
 } from 'lucide-react'
 import BlockchainBadge from './BlockchainBadge'
 
@@ -39,6 +40,23 @@ const REFUNDS: Record<string, number> = {
   'Aluminium': 8,
 }
 
+// Registered barcode lookup — DB থেকে bottle type + refund value আনে
+async function lookupBarcode(code: string): Promise<{ bottleType: string; refundValue: number; brand?: string | null } | null> {
+  try {
+    const res = await fetch(`/api/barcodes/lookup?code=${encodeURIComponent(code)}`)
+    if (res.status === 404) return null
+    if (res.status === 409) {
+      const data = await res.json()
+      throw new Error(data.error ?? 'Barcode already used')
+    }
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.found ? { bottleType: data.bottleType, refundValue: data.refundValue, brand: data.brand } : null
+  } catch (err: any) {
+    throw err
+  }
+}
+
 export default function ScanClient() {
   const { t }      = useLang()
   const { data: session } = useSession()
@@ -58,22 +76,44 @@ export default function ScanClient() {
   const [tokenResult, setTokenResult] = useState<TokenResult | null>(null)
   const [genError,    setGenError]    = useState('')
   const [codeCopied,  setCodeCopied]  = useState(false)
+  const [lookupError, setLookupError] = useState('')
+  const [looking,     setLooking]     = useState(false)
 
   const total = rows.reduce((s, r) => s + r.refund, 0)
 
-  const addRow = useCallback((code: string, type: string) => {
+  // Registered barcode হলে auto-detect type+value, না হলে manual type ব্যবহার করো
+  const addRow = useCallback(async (code: string, fallbackType: string) => {
     const norm = code.trim()
     if (!norm) return
-    setRows(prev => {
-      if (prev.some(r => r.code === norm)) {
-        setStatus(`${t('duplicate')}: ${norm}`)
-        return prev
+    setLookupError('')
+
+    if (rows.some(r => r.code === norm)) {
+      setStatus(`${t('duplicate')}: ${norm}`)
+      return
+    }
+
+    let type   = fallbackType
+    let refund = REFUNDS[fallbackType] ?? 5
+
+    setLooking(true)
+    try {
+      const result = await lookupBarcode(norm)
+      if (result) {
+        type   = result.bottleType
+        refund = result.refundValue
+        const hint = result.brand ? ` — ${result.brand}` : ''
+        setStatus(`✓ Registered: ${norm}${hint}`)
+      } else {
+        setStatus(`Manual: ${norm} (${type})`)
       }
       setLastCode(norm)
-      setStatus(`Scanned: ${norm}`)
-      return [{ code: norm, type, refund: REFUNDS[type] ?? 5 }, ...prev]
-    })
-  }, [t])
+      setRows(prev => [{ code: norm, type, refund }, ...prev])
+    } catch (err: any) {
+      setLookupError(err.message ?? 'Lookup failed')
+    } finally {
+      setLooking(false)
+    }
+  }, [rows, t])
 
   const stopScan = useCallback(async () => {
     setScanning(false)
@@ -116,7 +156,7 @@ export default function ScanClient() {
           if (codes.length > 0) {
             const val = codes[0].rawValue
             if (val !== lastCode) {
-              addRow(val, manualType)
+              addRow(val, manualType)  // async — fire and forget in interval
               setLastCode(val)
             }
           }
@@ -297,6 +337,11 @@ export default function ScanClient() {
         <div className="rounded-2xl overflow-hidden shadow-lg" style={{ background: 'var(--eco-card)' }}>
           <div className="relative aspect-video bg-black">
             <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+            {looking && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              </div>
+            )}
             {!scanning && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <CameraOff className="w-12 h-12 opacity-30 text-white" />
@@ -383,6 +428,12 @@ export default function ScanClient() {
                 </div>
               ))}
             </div>
+
+            {lookupError && (
+              <div className="mx-4 mb-2 p-3 rounded-lg text-sm" style={{ background: 'rgba(211,47,47,0.1)', color: '#d32f2f' }}>
+                {lookupError}
+              </div>
+            )}
 
             {genError && (
               <div className="mx-4 mb-3 p-3 rounded-lg text-sm" style={{ background: 'rgba(211,47,47,0.1)', color: '#d32f2f' }}>
