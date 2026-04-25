@@ -211,7 +211,7 @@ export default function ShopPanelClient() {
     { key: 'verify',   label: 'Token যাচাই',  icon: Search,   disabled: !isApproved },
     { key: 'redeem',   label: 'Redeem',        icon: Coins,    disabled: !isApproved },
     { key: 'history',  label: 'ইতিহাস',        icon: History,  disabled: !isApproved },
-  ] as const
+  ]
 
   return (
     <div className="min-h-screen py-8 px-4" style={{ background: 'var(--eco-bg, #f2f2f2)' }}>
@@ -258,7 +258,7 @@ export default function ShopPanelClient() {
         {/* Tab nav */}
         <div className="grid grid-cols-4 gap-1 p-1 rounded-xl"
           style={{ background: 'var(--eco-card, white)' }}>
-          {TABS.map(({ key, label, icon: Icon, disabled }) => (
+          {TABS.map(({ key, label, icon: Icon, disabled = false }) => (
             <button key={key}
               onClick={() => !disabled && setTab(key as any)}
               disabled={!!disabled}
