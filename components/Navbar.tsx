@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { useLang, useTheme } from '@/lib/providers'
-import { Moon, Sun, Globe, Menu, X, Recycle, LayoutDashboard, LogOut } from 'lucide-react'
+import { Moon, Sun, Globe, Menu, X, Recycle, LayoutDashboard, LogOut, Store } from 'lucide-react'
 import clsx from 'clsx'
 
 export default function Navbar() {
@@ -93,6 +93,17 @@ export default function Navbar() {
             {/* Auth buttons */}
             {session ? (
               <div className="hidden lg:flex items-center gap-2">
+                {(session.user as any)?.role === 'ADMIN' && (
+                  <Link href="/admin/dashboard" className="btn-outline-eco text-sm py-2 px-4">
+                    Admin
+                  </Link>
+                )}
+                {((session.user as any)?.role === 'SHOP_OWNER' || (session.user as any)?.role === 'ADMIN') && (
+                  <Link href="/shop" className="btn-outline-eco text-sm py-2 px-4">
+                    <Store className="w-3.5 h-3.5" />
+                    Shop
+                  </Link>
+                )}
                 <Link href="/dashboard" className="btn-outline-eco text-sm py-2 px-4">
                   <LayoutDashboard className="w-3.5 h-3.5" />
                   {t('dashboard')}
