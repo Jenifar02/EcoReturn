@@ -9,6 +9,8 @@
   --eco-accent:    #f2f2f2;
   --eco-highlight: #66bb6a;
   --eco-text:      #333333;
+  --eco-bg:        #f5f7f5;
+  --eco-card:      #ffffff;
 
   --shadow:  0 12px 30px rgba(0, 0, 0, 0.08);
   --radius:  16px;
@@ -24,6 +26,8 @@
   --eco-accent:    #0d1f0e;
   --eco-highlight: #81c784;
   --eco-text:      #e8f5e9;
+  --eco-bg:        #0d1f0e;
+  --eco-card:      #1a2e1b;
 
   --shadow:  0 12px 30px rgba(0, 0, 0, 0.4);
   --border:  rgba(255, 255, 255, 0.08);
