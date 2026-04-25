@@ -206,8 +206,8 @@ export default function ShopPanelClient() {
   const isApproved = shop?.status === 'APPROVED'
   const LIMIT = 20
 
-  const TABS = [
-    { key: 'register', label: 'নিবন্ধন',      icon: Store },
+  const TABS: Array<{ key: string; label: string; icon: any; disabled: boolean }> = [
+    { key: 'register', label: 'নিবন্ধন',      icon: Store,    disabled: false },
     { key: 'verify',   label: 'Token যাচাই',  icon: Search,   disabled: !isApproved },
     { key: 'redeem',   label: 'Redeem',        icon: Coins,    disabled: !isApproved },
     { key: 'history',  label: 'ইতিহাস',        icon: History,  disabled: !isApproved },
@@ -258,7 +258,7 @@ export default function ShopPanelClient() {
         {/* Tab nav */}
         <div className="grid grid-cols-4 gap-1 p-1 rounded-xl"
           style={{ background: 'var(--eco-card, white)' }}>
-          {TABS.map(({ key, label, icon: Icon, disabled = false }) => (
+          {TABS.map(({ key, label, icon: Icon, disabled }) => (
             <button key={key}
               onClick={() => !disabled && setTab(key as any)}
               disabled={!!disabled}
