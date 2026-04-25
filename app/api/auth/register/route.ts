@@ -8,6 +8,7 @@ const schema = z.object({
   email:    z.string().email(),
   phone:    z.string().min(11),
   password: z.string().min(8),
+  role:     z.enum(['USER', 'SHOP_OWNER']).optional().default('USER'),
 })
 
 export async function POST(req: NextRequest) {
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid input.' }, { status: 400 })
     }
 
-    const { name, email, phone, password } = parsed.data
+    const { name, email, phone, password, role } = parsed.data
 
     const existing = await prisma.user.findUnique({ where: { email } })
     if (existing) {
@@ -29,10 +30,10 @@ export async function POST(req: NextRequest) {
     const hashed = await bcrypt.hash(password, 12)
 
     const user = await prisma.user.create({
-      data: { name, email, phone, password: hashed },
+      data: { name, email, phone, password: hashed, role },
     })
 
-    return NextResponse.json({ id: user.id, email: user.email }, { status: 201 })
+    return NextResponse.json({ id: user.id, email: user.email, role: user.role }, { status: 201 })
   } catch (err) {
     console.error(err)
     return NextResponse.json({ error: 'Server error.' }, { status: 500 })

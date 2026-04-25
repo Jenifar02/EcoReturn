@@ -4,11 +4,14 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useLang } from '@/lib/providers'
-import { UserPlus, Eye, EyeOff } from 'lucide-react'
+import { UserPlus, Eye, EyeOff, User, Store } from 'lucide-react'
+
+type Role = 'USER' | 'SHOP_OWNER'
 
 export default function SignupForm() {
   const { t } = useLang()
   const router = useRouter()
+  const [role, setRole] = useState<Role>('USER')
   const [form, setForm] = useState({ name: '', phone: '', email: '', password: '', confirm: '' })
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -29,7 +32,7 @@ export default function SignupForm() {
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: form.name, phone: form.phone, email: form.email, password: form.password }),
+      body: JSON.stringify({ name: form.name, phone: form.phone, email: form.email, password: form.password, role }),
     })
 
     const data = await res.json()
@@ -60,6 +63,65 @@ export default function SignupForm() {
           <div className="panel">
             <h2 className="text-2xl font-black mb-1" style={{ letterSpacing: '-0.02em' }}>{t('getStarted')}</h2>
             <p className="opacity-65 text-sm mb-6">Fill in your details to create a free account.</p>
+
+            {/* ── Role Selection ── */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold mb-3">আমি কে? / I am a...</label>
+              <div className="grid grid-cols-2 gap-3">
+                {/* USER option */}
+                <button
+                  type="button"
+                  onClick={() => setRole('USER')}
+                  className="relative flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all duration-200 text-left cursor-pointer"
+                  style={{
+                    borderColor: role === 'USER' ? 'var(--eco-primary)' : 'rgba(0,0,0,0.10)',
+                    background: role === 'USER' ? 'rgba(102,187,106,0.10)' : 'var(--eco-card)',
+                    boxShadow: role === 'USER' ? '0 0 0 3px rgba(102,187,106,0.15)' : 'none',
+                  }}
+                >
+                  {role === 'USER' && (
+                    <span className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center text-white text-[10px] font-black" style={{ background: 'var(--eco-primary)' }}>✓</span>
+                  )}
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: role === 'USER' ? 'rgba(102,187,106,0.2)' : 'rgba(0,0,0,0.06)' }}>
+                    <User className="w-5 h-5" style={{ color: role === 'USER' ? 'var(--eco-primary)' : 'currentColor', opacity: role === 'USER' ? 1 : 0.5 }} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm leading-tight">সাধারণ User</p>
+                    <p className="text-xs opacity-55 mt-0.5 leading-snug">বোতল scan করে টাকা আয় করুন</p>
+                  </div>
+                </button>
+
+                {/* SHOP_OWNER option */}
+                <button
+                  type="button"
+                  onClick={() => setRole('SHOP_OWNER')}
+                  className="relative flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all duration-200 text-left cursor-pointer"
+                  style={{
+                    borderColor: role === 'SHOP_OWNER' ? 'var(--eco-primary)' : 'rgba(0,0,0,0.10)',
+                    background: role === 'SHOP_OWNER' ? 'rgba(102,187,106,0.10)' : 'var(--eco-card)',
+                    boxShadow: role === 'SHOP_OWNER' ? '0 0 0 3px rgba(102,187,106,0.15)' : 'none',
+                  }}
+                >
+                  {role === 'SHOP_OWNER' && (
+                    <span className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center text-white text-[10px] font-black" style={{ background: 'var(--eco-primary)' }}>✓</span>
+                  )}
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: role === 'SHOP_OWNER' ? 'rgba(102,187,106,0.2)' : 'rgba(0,0,0,0.06)' }}>
+                    <Store className="w-5 h-5" style={{ color: role === 'SHOP_OWNER' ? 'var(--eco-primary)' : 'currentColor', opacity: role === 'SHOP_OWNER' ? 1 : 0.5 }} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm leading-tight">Shop Owner</p>
+                    <p className="text-xs opacity-55 mt-0.5 leading-snug">Token redeem করুন, Admin approve করবে</p>
+                  </div>
+                </button>
+              </div>
+
+              {/* Info banner for Shop Owner */}
+              {role === 'SHOP_OWNER' && (
+                <div className="mt-3 p-3 rounded-xl text-xs leading-relaxed" style={{ background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.25)', color: 'rgba(120,80,0,0.85)' }}>
+                  <span className="font-bold">ℹ️ Shop Owner flow:</span> Account তৈরির পর login করলে shop registration form দেখাবে। Admin approve করলে আপনি token redeem করতে পারবেন।
+                </div>
+              )}
+            </div>
 
             {error && (
               <div className="mb-4 p-3 rounded-xl text-sm font-semibold" style={{ background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)', color: '#dc2626' }}>
