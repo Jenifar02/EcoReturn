@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState } from 'react'
@@ -32,7 +33,18 @@ export default function LoginForm() {
     if (res?.error) {
       setError('Invalid email or password.')
     } else {
-      router.push('/dashboard')
+      // Role দেখে সঠিক page এ redirect করো
+      const sessionRes = await fetch('/api/auth/session')
+      const sessionData = await sessionRes.json()
+      const role = sessionData?.user?.role
+
+      if (role === 'ADMIN') {
+        router.push('/admin/dashboard')
+      } else if (role === 'SHOP_OWNER') {
+        router.push('/shop')
+      } else {
+        router.push('/dashboard')
+      }
       router.refresh()
     }
   }
