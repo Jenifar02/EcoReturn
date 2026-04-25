@@ -157,7 +157,18 @@ export default function Navbar() {
             <div className="flex gap-2 flex-wrap">
               {session ? (
                 <>
-                  <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="btn-outline-eco text-sm py-2 px-4 flex-1">
+                  {(session.user as any)?.role === 'ADMIN' && (
+                    <Link href="/admin/dashboard" onClick={() => setMenuOpen(false)} className="btn-outline-eco text-sm py-2 px-4 flex-1 text-center">
+                      Admin
+                    </Link>
+                  )}
+                  {((session.user as any)?.role === 'SHOP_OWNER' || (session.user as any)?.role === 'ADMIN') && (
+                    <Link href="/shop" onClick={() => setMenuOpen(false)} className="btn-outline-eco text-sm py-2 px-4 flex-1 text-center flex items-center justify-center gap-1">
+                      <Store className="w-3.5 h-3.5" />
+                      Shop
+                    </Link>
+                  )}
+                  <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="btn-outline-eco text-sm py-2 px-4 flex-1 text-center">
                     {t('dashboard')}
                   </Link>
                   <button onClick={() => signOut({ callbackUrl: '/' })} className="btn-eco text-sm py-2 px-4 flex-1">

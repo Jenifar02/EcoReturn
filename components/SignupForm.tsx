@@ -67,12 +67,12 @@ export default function SignupForm() {
             {/* ── Role Selection ── */}
             <div className="mb-6">
               <label className="block text-sm font-semibold mb-3">আমি কে? / I am a...</label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 min-[360px]:grid-cols-2">
                 {/* USER option */}
                 <button
                   type="button"
                   onClick={() => setRole('USER')}
-                  className="relative flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all duration-200 text-left cursor-pointer"
+                  className="relative flex flex-col items-center gap-2 p-3 sm:p-4 rounded-2xl border-2 transition-all duration-200 text-left cursor-pointer"
                   style={{
                     borderColor: role === 'USER' ? 'var(--eco-primary)' : 'rgba(0,0,0,0.10)',
                     background: role === 'USER' ? 'rgba(102,187,106,0.10)' : 'var(--eco-card)',
@@ -95,7 +95,7 @@ export default function SignupForm() {
                 <button
                   type="button"
                   onClick={() => setRole('SHOP_OWNER')}
-                  className="relative flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all duration-200 text-left cursor-pointer"
+                  className="relative flex flex-col items-center gap-2 p-3 sm:p-4 rounded-2xl border-2 transition-all duration-200 text-left cursor-pointer"
                   style={{
                     borderColor: role === 'SHOP_OWNER' ? 'var(--eco-primary)' : 'rgba(0,0,0,0.10)',
                     background: role === 'SHOP_OWNER' ? 'rgba(102,187,106,0.10)' : 'var(--eco-card)',

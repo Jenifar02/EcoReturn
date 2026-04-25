@@ -7,13 +7,14 @@
  */
 
 import { useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import BlockchainBadge from './BlockchainBadge'
 import {
   Users, Store, Recycle, Coins, Clock, CheckCircle,
   XCircle, Shield, TrendingUp, Search, ChevronLeft,
-  ChevronRight, RefreshCw, AlertCircle, LayoutGrid,
+  ChevronRight, RefreshCw, AlertCircle, LayoutGrid, QrCode,
 } from 'lucide-react'
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -187,11 +188,18 @@ export default function AdminDashboardClient() {
             </h1>
             <p className="text-sm opacity-50 mt-0.5">EcoReturn Bangladesh Control Panel</p>
           </div>
-          <button onClick={loadOverview}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold"
-            style={{ borderColor: 'var(--eco-primary)', color: 'var(--eco-primary)' }}>
-            <RefreshCw className="w-3.5 h-3.5" /> Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <Link href="/admin/barcodes"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-white"
+              style={{ background: 'var(--eco-primary)' }}>
+              <QrCode className="w-3.5 h-3.5" /> Barcode Generate
+            </Link>
+            <button onClick={loadOverview}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-semibold"
+              style={{ borderColor: 'var(--eco-primary)', color: 'var(--eco-primary)' }}>
+              <RefreshCw className="w-3.5 h-3.5" /> Refresh
+            </button>
+          </div>
         </div>
 
         {/* Tab Nav */}
